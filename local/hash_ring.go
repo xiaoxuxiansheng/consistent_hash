@@ -10,7 +10,49 @@ import (
 	"time"
 
 	"github.com/xiaoxuxiansheng/consistent_hash/pkg/os"
+	"github.com/xiaoxuxiansheng/redis_lock/utils"
 )
+
+type LockEntityV2 struct {
+	locked   bool
+	mutex    sync.Mutex
+	expireAt time.Time
+	owner    string
+}
+
+func NewLockEntityV2() *LockEntityV2 {
+	return &LockEntityV2{}
+}
+
+func (l *LockEntityV2) Lock(ctx context.Context, expireSeconds int) error {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+
+	now := time.Now()
+	if !l.locked || l.expireAt.Before(now) {
+		l.locked = true
+		l.expireAt = now.Add(time.Duration(expireSeconds) * time.Second)
+		l.owner = utils.GetProcessAndGoroutineIDStr()
+		return nil
+	}
+
+	return errors.New("accquire by others")
+}
+
+func (l *LockEntityV2) Unlock(ctx context.Context) error {
+	l.mutex.Lock()
+	defer l.mutex.Unlock()
+	if !l.locked || l.expireAt.Before(time.Now()) {
+		return errors.New("not locked")
+	}
+
+	if l.owner != utils.GetProcessAndGoroutineIDStr() {
+		return errors.New("not your lock")
+	}
+
+	l.locked = false
+	return nil
+}
 
 // 基于本地跳表实现一个 hash_ring
 type SkiplistHashRing struct {
