@@ -33,16 +33,12 @@ const (
 	address  = "redis 地址"
 	password = "redis 密码"
 
-	hashRingKey = "my_test_hash_ring26"
+	hashRingKey = "哈希环唯一 id"
 )
 
 func Test_redis_consistent_hash(t *testing.T) {
 	redisClient := redis.NewClient(network, address, password)
 	hashRing := redis.NewRedisHashRing(hashRingKey, redisClient)
-	// migrator := func(ctx context.Context, dataKeys []string, from, to string) error {
-	// 	t.Logf("from: %s, to: %s, data keys: %v", from, to, dataKeys)
-	// 	return nil
-	// }
 	consistentHash := NewConsistentHash(hashRing, NewMurmurHasher(), nil)
 	test(t, consistentHash)
 }
@@ -158,9 +154,3 @@ func Test_local_lock(t *testing.T) {
 		return
 	}
 }
-
-// func Test_getNodeID(t *testing.T) {
-// 	str := "abc_a_c"
-// 	t.Error(getNodeID(str))
-
-// }
